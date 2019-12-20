@@ -1,10 +1,22 @@
-from flask import Flask, url_for
+from flask import Flask, url_for, render_template
 
 app = Flask(__name__)
 
 @app.route('/')
-def hello():
-    return '<h1>Hello Totoro!</h1><img src="http://helloflask.com/totoro.gif">'
+def index():
+    name = 'BaoGang'
+    movies = [
+        {'title': 'Call Me By Your Name', 'year': '2017'},
+        {'title': 'Perfetti sconosciuti', 'year': '2016'},
+        {'title': 'Lust Caution', 'year': '2007'},
+        {'title': 'Adios a Mi Concubina', 'year': '1993'},
+        {'title': 'Mr.Donkey', 'year': '2016'},
+        {'title': 'Intouchables', 'year': '2011'},
+        {'title': 'Lan Yu', 'year': '2001'},
+        {'title': 'The Dead End', 'year': '2015'},
+        {'title': 'Dear EX', 'year': '2018'},
+    ]
+    return render_template('index.html', name=name, movies=movies)
 
 @app.route('/user/<name>')
 def user_page(name):

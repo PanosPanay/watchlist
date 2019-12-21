@@ -11,19 +11,28 @@
     {% endblock %}
 </head>
 <body>
+    <!-- 使用get_flashed_messages()函数获取提示消息并显示 -->
+    {% for message in get_flashed_messages() %}
+        <div class="alert">{{ message }}</div>
+    {% endfor %}
+    
+    <!-- 页面标题 -->
     <h2>
         <img alt="Avatar" class="avatar" src="{{ url_for('static', filename='images/avatar.png') }}">
         {{ user.name }}'s Watchlist
     </h2>
     
-    <nav><!-- 导航栏 -->
+    <!-- 导航栏 -->
+    <nav>
         <ul>
             <li><a href="{{ url_for('index') }}">Home</a></li>
         </ul>
     </nav>
 
+    <!-- 正文 -->
     {% block content %}{% endblock %}
-    
+
+    <!-- 页脚 -->
     <footer>
         <small>&copy; 2019 <a href="https://panospanay.github.io/">良多</a></small>
     </footer>

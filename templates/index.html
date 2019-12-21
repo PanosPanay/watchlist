@@ -2,10 +2,22 @@
 
 {% block content %}             {# 默认的块重写行为是覆盖，如果想要向父块追加内容，可以在子块中使用 super() 声明，即 {{ super() }} #}
 <p>{{ movies|length }} Titles</p>
+{# 添加创建新条目表单 #}
+<form method="post">
+    Name <input type="text" name="title" autocomplete="off" required>   <!-- autocomplete设为off关闭自动完成（按下输入框不显示历史输入记录）；required属性：用户未输入按下提交按钮，浏览器会显示错误提示 -->
+    Year <input type="text" name="year" autocomplete="off" required>
+    <input class="btn" type="submit" name="submit" value="Add">
+</form>
+{# 电影列表 #}
 <ul class="movie-list">
     {% for movie in movies %}   {# 迭代 movies 变量 #}
     <li>{{ movie.title }} - {{movie.year}}   {# 等同于 movie['title'] #}
         <span class="float-right">
+            <a class="btn" href="{{ url_for('edit', movie_id=movie.id) }}">编辑</a>
+            <!-- 为了安全的考虑，一般使用POST请求来提交删除请求，也就是使用表单来实现（而不是创建删除链接） -->
+            <form class="inline-form" method="post" action="{{ url_for('delete', movie_id=movie.id) }}">
+                <input class="btn" type="submit" name="delete" value="Delete" onclick="return confirm('Are you sure you want to delete this movie?')">  {# 弹窗提示是否删除 #}
+            </form>
             <a class="douban" href="https://www.douban.com/search?source=suggest&q={{ movie.title }}" target="_blank" title="Find this movie on douban.">豆瓣</a>
         </span>
     </li>

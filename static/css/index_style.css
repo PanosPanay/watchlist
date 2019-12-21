@@ -100,3 +100,58 @@ nav li a:hover
     border-radius: 5px;
     padding: 3px 5px;
 }
+
+/* 创建新条目的输入框和提交按钮 */
+input[type=submit]
+{
+    font-family: inherit;
+}
+
+input[type=text]
+{
+    border: 1px solid #ddd;
+}
+
+input[name=year]
+{
+    width: 50px;
+}
+
+.btn
+{
+    font-size: 12px;
+    padding: 3px 5px;
+    text-decoration: none;
+    cursor: pointer;
+    background-color: white;
+    color: black;
+    border: 1px solid #555555;
+    border-radius: 5px;
+}
+
+.btn:hover
+{
+    text-decoration: none;
+    background-color: black;
+    color: white;
+    border: 1px solid black;
+}
+
+/* flash提示消息 */
+.alert
+{
+    position: relative;
+    padding: 7px;
+    margin: 7px 0;
+    border: 1px solid transparent;
+    color: #004085;
+    background-color: #cce5ff;
+    border-color: #b8daff;
+    border-radius: 5px;
+}
+
+/* 表单元素，让删除按钮和旁边的编辑链接排成一排 */
+.inline-form
+{
+    display: inline;
+}

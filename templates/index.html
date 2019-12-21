@@ -1,28 +1,15 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>{{ user.name }}'s Watchlist</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/index_style.css') }}" type="text/css">
-    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
-</head>
-<body>
-    <h2>
-        <img alt="Avatar" class="avatar" src="{{ url_for('static', filename='images/avatar.png') }}">
-        {{ user.name }}'s Watchlist
-    </h2>
-    {# 使用 length 过滤器获取 movies  变量的长度 #}
-    <p>{{ movies|length }} Titles</p>
-    <ul class="movie-list">
-        {% for movie in movies %}   {# 迭代 movies 变量 #}
-        <li>{{ movie.title }} - {{movie.year}}</li> {# 等同于 movie['title'] #}
-        {% endfor %}    {# 使用 endfor 标签结束 for 语句 #}
-    </ul>
-    <img alt="Dancing hanpijieni" class="hanpi" src="{{ url_for('static', filename='images/hanpi.gif') }}">
-    <footer>
-        <small>&copy; 2019 <a href="https://panospanay.github.io/">良多</a></small>
-    </footer>
-</body>
-</html>
+{% extends 'base.html' %}
+
+{% block content %}             {# 默认的块重写行为是覆盖，如果想要向父块追加内容，可以在子块中使用 super() 声明，即 {{ super() }} #}
+<p>{{ movies|length }} Titles</p>
+<ul class="movie-list">
+    {% for movie in movies %}   {# 迭代 movies 变量 #}
+    <li>{{ movie.title }} - {{movie.year}}   {# 等同于 movie['title'] #}
+        <span class="float-right">
+            <a class="douban" href="https://www.douban.com/search?source=suggest&q={{ movie.title }}" target="_blank" title="Find this movie on douban.">豆瓣</a>
+        </span>
+    </li>
+    {% endfor %}    {# 使用 endfor 标签结束 for 语句 #}
+</ul>
+<img alt="Dancing hanpijieni" class="hanpi" src="{{ url_for('static', filename='images/hanpi.gif') }}">
+{% endblock %}

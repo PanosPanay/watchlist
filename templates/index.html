@@ -20,7 +20,7 @@
             <a class="btn" href="{{ url_for('edit', movie_id=movie.id) }}">编辑</a>
             <!-- 为了安全的考虑，一般使用POST请求来提交删除请求，也就是使用表单来实现（而不是创建删除链接） -->
             <form class="inline-form" method="post" action="{{ url_for('delete', movie_id=movie.id) }}">
-                <input class="btn" type="submit" name="delete" value="Delete" onclick="return confirm('Are you sure you want to delete this movie?')">  {# 弹窗提示是否删除 #}
+                <input class="btn" type="submit" name="delete" value="删除" onclick="return confirm('Are you sure you want to delete this movie?')">  {# 弹窗提示是否删除 #}
             </form>
             {% endif %}
             <a class="douban" href="https://www.douban.com/search?source=suggest&q={{ movie.title }}" target="_blank" title="Find this movie on douban.">豆瓣</a>

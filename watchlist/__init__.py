@@ -13,9 +13,9 @@ else:       # 否则使用4个斜线
     prefix = 'sqlite:////'
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'dev'    # flash消息签名所需的密钥，等同于app.secret_key = 'dev'
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev')    # flash消息签名所需的密钥
 # 注意更新这里的路径，把 app.root_path 添加到 os.path.dirname() 中，以便把文件定位到项目根目录
-app.config['SQLALCHEMY_DATABASE_URI'] = prefix + os.path.join(os.path.dirname(app.root_path), 'data.db') # 数据库连接地址
+app.config['SQLALCHEMY_DATABASE_URI'] = prefix + os.path.join(os.path.dirname(app.root_path), os.getenv('DATABASE_FILE', 'data.db')) # 数据库连接地址
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False    # 关闭对模型修改的监控
 
 # 在扩展类实例化前加载配置

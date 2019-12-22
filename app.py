@@ -3,6 +3,8 @@ import sys
 from flask import Flask, url_for, render_template, request, redirect, flash
 from flask_sqlalchemy import SQLAlchemy     # 导入 Flask-SQLAlchemy 扩展类
 import click
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user        # 导入用户认证扩展类
 
 # sqlite:///数据库文件的绝对地址，若不是WINDOWS系统，表示为sqlite:////
 WIN = sys.platform.startswith("win")
@@ -19,11 +21,28 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False    # 关闭对模型修改�
 # 在扩展类实例化前加载配置
 db = SQLAlchemy(app)    # 初始化扩展，传入程序实例 app
 
+login_manager = LoginManager(app)   # 初始化Flask-Login
+login_manager.login_view = 'login'  # 当未登录用户执行被限制的操作，重新定向到登录页面，并显示一个错误提示
+# 如果需要的话，可以通过设置 login_manager.login_message 来自定义错误提示消息
 
 # 创建数据库模型
-class User(db.Model):   # 表名将会是 user （自动生成，小写处理）
+class User(db.Model, UserMixin):   # 表名将会是 user （自动生成，小写处理）
     id = db.Column(db.Integer, primary_key=True)    # 主键
-    name = db.Column(db.String(20))                 # 用户名字
+    name = db.Column(db.String(20))                 # 用户昵称
+    username = db.Column(db.String(20))             # 用户名
+    password_hash = db.Column(db.String(128))       # 密码散列值
+
+    def set_password(self, password):
+        """设置密码
+        :param password: 待设置密码
+        """
+        self.password_hash = generate_password_hash(password)
+
+    def validate_password(self, password):
+        """验证密码
+        :param password: 待验证的密码
+        """
+        return check_password_hash(self.password_hash, password)
 
 class Movie(db.Model):  # 表名将会是 movie
     id = db.Column(db.Integer, primary_key=True)    # 主键
@@ -80,6 +99,33 @@ def forge():
     db.session.commit()                         # 提交数据库会话
     click.echo('Done.')                         # 输出提示信息
 
+@app.cli.command()
+@click.option('--username', prompt=True, help='The username used to login.')
+@click.option('--password', prompt=True, hide_input=True, confirmation_prompt=True, help='The password used to login.') # hide_input=True会让密码输入隐藏，confirmation_prompt=True要求二次确认输入
+def admin(username, password):
+    """生成管理员账户
+    命令行中执行命令,eg.  flask admin --username baogang --password 123
+    """
+    db.create_all()
+
+    user = User.query.first()
+    if user is not None:
+        click.echo('Updating user...')
+        user.username = username
+        user.set_password(password)
+    else:
+        click.echo('Creating user...')
+        user = User(username=username, name='Admin')
+        user.set_password(password)
+        db.session.add(user)
+
+    db.session.commit()
+    click.echo('Done.')
+
+@login_manager.user_loader
+def load_user(user_id):
+    user = User.query.get(int(user_id))         # 用ID作为User魔性的主键查询对应的用户
+    return user     # 返回用户对象
 
 @app.context_processor
 def inject_user():  # 函数名可以随意修改
@@ -95,7 +141,10 @@ def page_not_found(e):      # 接受异常对象作为参数
 @app.route('/', methods=['GET', 'POST'])        # methods表示同时接受GET和POST请求，否则默认只接受GET请求
 def index():
     """主页"""
+    # 新增电影条目
     if request.method == 'POST':                # 判断是否是POST请求
+        if not current_user.is_authenticated:   # 如果当前用户未认证/登录
+            return redirect(url_for('index'))   # 重定向回主页(未登录不能使用增加条目功能)
         # 获取表单数据
         title = request.form.get('title')       # request.form是一个特殊的字典
         year = request.form.get('year')
@@ -111,10 +160,12 @@ def index():
         flash('Item created.')                  # 显示成功创建的提示
         return redirect(url_for('index'))       # 重定向回主页
 
+    # 显示电影列表
     movies = Movie.query.all()                  # 读取所有电影记录
     return render_template('index.html', movies=movies)
 
 @app.route('/movie/edit/<int:movie_id>', methods=['GET', 'POST'])
+@login_required     # 用于视图保护,将未登录用户拒之门外
 def edit(movie_id):
     """编辑电影条目页面"""
     movie = Movie.query.get_or_404(movie_id)    # 获取待更新的电影记录
@@ -136,6 +187,7 @@ def edit(movie_id):
     return render_template('edit.html', movie=movie)    # 传入被编辑的电影记录
 
 @app.route('/movie/delete/<int:movie_id>', methods=['POST'])    # 限定只接受POST请求
+@login_required     # 用于视图保护,将未登录用户拒之门外
 def delete(movie_id):
     """只相应删除电影条目按钮的操作，无单独页面"""
     movie = Movie.query.get_or_404(movie_id)    # 获取电影记录
@@ -144,31 +196,59 @@ def delete(movie_id):
     flash('Item deleted.')
     return redirect(url_for('index'))           # 重定向回主页
 
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """登录"""
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+
+        if not username or not password:
+            flash('Invalid input.')
+            return redirect(url_for('login'))
+
+        user = User.query.first()
+        # 验证用户名和密码是否一致
+        if username == user.username and user.validate_password(password):
+            login_user(user)                    # 登录用户
+            flash('Login success.')
+            return redirect(url_for('index'))   # 重新定向到主页
+
+        flash('Invalid username or password.')  # 如果验证失败，显示错误信息
+        return redirect(url_for('login'))       # 重定向回登录页面
+
+    return render_template('login.html')
+
+@app.route('/logout')
+@login_required     # 用于视图保护,将未登录用户拒之门外
+def logout():
+    """注销/登出"""
+    logout_user()   # 登出用户
+    flash('Goodbye.')
+    return redirect(url_for('index'))           # 重定向回主页
 
 @app.route('/user/<name>')
 def user_page(name):
     return 'User: %s' % name
 
-@app.route('/test')
-def test_url_for():
-    str = 'Test Page...\n'
+@app.route('/settings', methods=['GET', 'POST'])
+@login_required     # 用于视图保护,将未登录用户拒之门外
+def settings():
+    """设置界面，设置用户名字（昵称）"""
+    if request.method == 'POST':
+        name = request.form['name']
 
-    # 下面是一些调用示例（请在命令行窗口中查看输出的 URL）:  # 实际上命令行不输出？？？<==在关闭服务或重新加载时会显示
-    # print(url_for('hello'))                     # 输出：/
-    str += url_for('hello')
-    str += '\n'
+        if not name or len(name) >20:
+            flash('Invalid input.')
+            return redirect(url_for('settings'))
 
-    # print(url_for('user_page', name='baogang')) # 输出：/user/baogang
-    # print(url_for('user_page', name='hanpi'))   # 输出：/user/hanpi
-    str += url_for('user_page', name='baogang')
-    str += '\n'
-    str += url_for('user_page', name='hanpi')
-    str += '\n'
+        current_user.name = name
+        # current_user 会返回当前登录用户的数据库记录对象
+        # 等同于下面的用法
+        # user = User.query.first()
+        # user.name = name
+        db.session.commit()
+        flash('Settings updated.')
+        return redirect(url_for('index'))
 
-    # 传入了多于的关键字参数，会被当作查询字符串附加到URL后面
-    # print(url_for('test_url_for', num=2))       # 输出：/test?num=2
-    str += url_for('test_url_for', num=2)
-    str += '\n'
-
-    # return 'Test Page...'
-    return str
+    return render_template('settings.html')
